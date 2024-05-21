@@ -2,7 +2,7 @@
 * means relevant, ** means extra relevant, *** VAE/CVAE relevant;
 
 ## Data creation/manipulation
-Cut_imsgs.py\
+Cut_imgs.py\
 Eos_inputrework_fast.py *\
 Eos_newData - Copia.py\
 Eos_newData_bugifxS.py\
@@ -11,8 +11,9 @@ data_man_pick.py ***
 
 ## EoS classification paper reproduce
 data_manipulation.py\
+Eos_inputrework.py\
 Eos_reply_2.py\
-Eos_network.py *\
+Eos_network.py *
 
 ## Flow estimation (CNN)
 flow_idea_ft.py **\
