@@ -1,0 +1,52 @@
+Otimizador:
+'adam': Adam
+'adamax': Adamax
+'rmsprop': RMSprop
+'sgd': Gradiente Descendente Estocástico (SGD)
+
+Taxa de Dropout:
+0.0: Sem dropout
+0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9: Taxas de dropout variadas
+
+Função de Ativação:
+'relu': Unidade Linear Retificada (ReLU)
+'sigmoid': Sigmoid
+'tanh': Tangente Hiperbólica (Tanh)
+'elu': Exponencial Linear Unit (ELU)
+'softmax': Softmax (geralmente usado na camada de saída para classificação multiclasse)
++ 'linear', 'selu'
+
+Taxa de Aprendizado:
+Valores numéricos, como 0.1, 0.01, 0.001, etc.
+'adaptive': taxa de aprendizado adaptativa (usada em alguns otimizadores)
+
+Regularização:
+0.0: Sem regularização
+Valores numéricos para regularização L1 ou L2, por exemplo: 0.01, 0.001, etc.
+
+Tamanho do Kernel de Pooling:
+Valores numéricos, geralmente (2, 2), (3, 3), (4, 4), etc.
+
+Tipo de Pooling:
+'max': Max Pooling
+'avg': Average Pooling
+
+Inicialização de Pesos:
+'random_uniform': Inicialização uniformemente aleatória
+'glorot_uniform': Inicialização de Glorot (Xavier)
+'he_uniform': Inicialização de He
+
+Número de camadas convolucionais: Este parâmetro define quantas camadas convolucionais sua rede terá. Por exemplo, você pode ter 1, 2, 3 ou 
+mais camadas convolucionais.
+
+Número de filtros: Define quantos filtros convolucionais serão usados em cada camada convolucional. Mais filtros podem ajudar a capturar 
+mais características em diferentes níveis de abstração.
+
+Tamanho do filtro (ou kernel): Define o tamanho espacial dos filtros convolucionais. Os tamanhos comuns são (3, 3), (5, 5) e (7, 7), mas 
+você pode experimentar com outros tamanhos também.
+
+Tamanho do batch: Especifica quantas amostras de dados serão utilizadas em cada iteração do treinamento. Um tamanho de lote maior pode 
+levar a uma convergência mais rápida, mas também pode exigir mais memória.
+
+Arquitetura da rede: Isso inclui a disposição das camadas convolucionais, de pooling e totalmente conectadas em sua CNN. Você pode 
+experimentar com diferentes arquiteturas, como VGG, ResNet, Inception, etc.
