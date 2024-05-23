@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from torch.utils.data import TensorDataset, DataLoader
+import torch.nn.functional as F
 
 # paths: 
 EOSXimgs_40 = ["D:/Users/mathe/ML/EoS/IMG_DATA/EOSL_low_40b", "D:/Users/mathe/ML/EoS/IMG_DATA/EOSQ_low_40"]
@@ -20,7 +21,7 @@ X_train40, X_val40, X_test40, Y_train40, Y_val40, Y_test40 = dmp.get_data(paths=
 
 # pTensor= dataset.pytorch_tensor_samples([sample,sample1])
 def NCHW(trainX, valX, testX, trainY, valY, testY):
-
+    '''
     b = []
     for j in [trainY, valY, testY]:
         j = torch.from_numpy(j).float()  # Assuming "j" is a Numpy array
@@ -30,17 +31,32 @@ def NCHW(trainX, valX, testX, trainY, valY, testY):
     a = []
     for i in [trainX, valX, testX]:
         i = torch.from_numpy(i).float()  # Assuming "i" is a Numpy array
-        i = i.torch.Tensor.permute(0, 3, 1, 2) # [batch size, number of channels, height, width]
+        #i = i.torch.Tensor.permute(0, 3, 1, 2) # [batch size, number of channels, height, width]
+        i = i.permute(0, 3, 1, 2) # [batch size, number of channels, height, width]
         a.append(i)
     # xt, xv, xtest = traindata.torch.Tensor.permute(0, 3, 1, 2), valdata.torch.Tensor.permute(0, 3, 1, 2), testdata.torch.Tensor.permute(0, 3, 1, 2)
-    
-    train_dataset = TensorDataset(a, b)
+    '''
+    b = [torch.from_numpy(j).float() for j in [trainY, valY, testY]]
+    a = [torch.from_numpy(i).float().permute(0, 3, 1, 2) for i in [trainX, valX, testX]]
+
+
+    #train_dataset = TensorDataset(a[0], b[0])
+    #train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+
+    # Create TensorDataset and DataLoader for each dataset
+    train_dataset = TensorDataset(a[0], b[0])
+    val_dataset = TensorDataset(a[1], b[1])
+    test_dataset = TensorDataset(a[2], b[2])
+
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
-    return train_loader
+    return train_loader, val_loader, test_loader
 
-a = NCHW(X_train40, X_val40, X_test40, Y_train40, Y_val40, Y_test40)
-X_train40, X_val40, X_test40 = a[0], a[1], a[2]
+#a = NCHW(X_train40, X_val40, X_test40, Y_train40, Y_val40, Y_test40)
+#X_train40, X_val40, X_test40 = a[0], a[1], a[2]
+train_loader40, val_loader40, test_loader40 = NCHW(X_train40, X_val40, X_test40, Y_train40, Y_val40, Y_test40)
 # b = NCHW(X_train50, X_val50, X_test50)
 # X_train50, X_val50, X_test50 = b[0], b[1], b[2]
 
@@ -77,7 +93,7 @@ def show_images(images, labels):
     plt.show()
 
 
-
+'''
 class AutoEncoder(torch.nn.Module):
     def __init__(self):
         super().__init__()
@@ -131,12 +147,54 @@ class AutoEncoder(torch.nn.Module):
         decoded = self.decoder(encoded)
         # Return both the encoded representation and the reconstructed output
         return encoded, decoded
-    
+    '''
 
+class AutoEncoder(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        
+        self.encoder = torch.nn.Sequential(
+            torch.nn.Conv2d(in_channels=4, out_channels=16, kernel_size=(3, 3), padding=1),
+            torch.nn.Dropout(.2),
+            torch.nn.BatchNorm2d(num_features=16),
+            torch.nn.PReLU(),
+            torch.nn.Conv2d(in_channels=16, out_channels=32, kernel_size=(3, 3), padding=1),
+            torch.nn.Dropout(.2),
+            torch.nn.BatchNorm2d(num_features=32),
+            torch.nn.PReLU(),
+            torch.nn.Flatten()
+        )
+
+        # Determinar a dimensão correta da saída da camada convolucional antes de Flatten
+        dummy_input = torch.randn(1, 4, 50, 50)  # Um exemplo de entrada com as dimensões corretas
+        flattened_size = self.encoder(dummy_input).view(-1).size(0)
+        
+        self.fc1 = torch.nn.Linear(in_features=flattened_size, out_features=64)
+        self.fc2 = torch.nn.Linear(in_features=64, out_features=3)
+        
+        self.decoder_fc1 = torch.nn.Linear(in_features=3, out_features=64)
+        self.decoder_fc2 = torch.nn.Linear(in_features=64, out_features=flattened_size)
+
+        self.decoder = torch.nn.Sequential(
+            torch.nn.ConvTranspose2d(in_channels=32, out_channels=16, kernel_size=(3, 3), padding=1),
+            torch.nn.ReLU(),
+            torch.nn.ConvTranspose2d(in_channels=16, out_channels=4, kernel_size=(3, 3), padding=1),
+            torch.nn.ReLU()
+        )
+
+    def forward(self, x):
+        encoded = self.encoder(x)
+        encoded = F.relu(self.fc1(encoded))
+        encoded = self.fc2(encoded)
+        decoded = F.relu(self.decoder_fc1(encoded))
+        decoded = F.relu(self.decoder_fc2(decoded))
+        decoded = decoded.view(-1, 32, 50, 50)  # Ajustar a dimensão para (batch_size, canais, altura, largura)
+        decoded = self.decoder(decoded)
+        return encoded, decoded
 
 
 # Convert the training data to PyTorch tensors
-X_train = torch.from_numpy(X_train40)
+# X_train = torch.from_numpy(X_train40)
 
 # Create the autoencoder model and optimizer
 model = AutoEncoder()
@@ -149,33 +207,33 @@ criterion = torch.nn.MSELoss()
 # model.to(device)
 
 # Create a DataLoader to handle batching of the training data
-train_loader = torch.utils.data.DataLoader(
+'''train_loader = torch.utils.data.DataLoader(
     X_train, batch_size=batch_size, shuffle=True
-)
+)'''
 
 
 
 # Training loop
 for epoch in range(num_epochs):
     total_loss = 0.0
-    for batch_idx, data in enumerate(train_loader):
+    for batch_idx, (inputs, targets) in enumerate(train_loader40):
         # Get a batch of training data and move it to the device
         # data = data.to(device)
 
         # Forward pass
-        encoded, decoded = model(data)
+        encoded, decoded = model(inputs)
 
         # Compute the loss and perform backpropagation
-        loss = criterion(decoded, data)
+        loss = criterion(decoded, inputs)
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
         # Update the running loss
-        total_loss += loss.item() * data.size(0)
+        total_loss += loss.item() * inputs.size(0)
 
     # Print the epoch loss
-    epoch_loss = total_loss / len(train_loader.dataset)
+    epoch_loss = total_loss / len(train_loader40.dataset)
     print(
         "Epoch {}/{}: loss={:.4f}".format(epoch + 1, num_epochs, epoch_loss)
     )
