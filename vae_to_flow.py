@@ -1,3 +1,5 @@
+#  Convolutional Autoencoder
+
 import data_man_pick as dmp
 import tensorflow as tf
 import matplotlib.pyplot as plt
@@ -5,6 +7,7 @@ import numpy as np
 import torch
 from torch.utils.data import TensorDataset, DataLoader
 import torch.nn.functional as F
+from sklearn.metrics import r2_score
 
 # paths: 
 EOSXimgs_40 = ["D:/Users/mathe/ML/EoS/IMG_DATA/EOSL_low_40b", "D:/Users/mathe/ML/EoS/IMG_DATA/EOSQ_low_40"]
@@ -148,17 +151,17 @@ class AutoEncoder(torch.nn.Module):
         # Return both the encoded representation and the reconstructed output
         return encoded, decoded
     '''
-
+'''
 class AutoEncoder(torch.nn.Module):
     def __init__(self):
         super().__init__()
         
         self.encoder = torch.nn.Sequential(
-            torch.nn.Conv2d(in_channels=4, out_channels=16, kernel_size=(3, 3), padding=1),
+            torch.nn.Conv2d(in_channels=4, out_channels=16, kernel_size=(8, 8), padding=3),
             torch.nn.Dropout(.2),
             torch.nn.BatchNorm2d(num_features=16),
             torch.nn.PReLU(),
-            torch.nn.Conv2d(in_channels=16, out_channels=32, kernel_size=(3, 3), padding=1),
+            torch.nn.Conv2d(in_channels=16, out_channels=32, kernel_size=(7, 7), padding=3),
             torch.nn.Dropout(.2),
             torch.nn.BatchNorm2d(num_features=32),
             torch.nn.PReLU(),
@@ -176,9 +179,9 @@ class AutoEncoder(torch.nn.Module):
         self.decoder_fc2 = torch.nn.Linear(in_features=64, out_features=flattened_size)
 
         self.decoder = torch.nn.Sequential(
-            torch.nn.ConvTranspose2d(in_channels=32, out_channels=16, kernel_size=(3, 3), padding=1),
+            torch.nn.ConvTranspose2d(in_channels=32, out_channels=16, kernel_size=(7, 7), padding=3),
             torch.nn.ReLU(),
-            torch.nn.ConvTranspose2d(in_channels=16, out_channels=4, kernel_size=(3, 3), padding=1),
+            torch.nn.ConvTranspose2d(in_channels=16, out_channels=4, kernel_size=(8, 8), padding=3),
             torch.nn.ReLU()
         )
 
@@ -188,10 +191,61 @@ class AutoEncoder(torch.nn.Module):
         encoded = self.fc2(encoded)
         decoded = F.relu(self.decoder_fc1(encoded))
         decoded = F.relu(self.decoder_fc2(decoded))
-        decoded = decoded.view(-1, 32, 50, 50)  # Ajustar a dimensão para (batch_size, canais, altura, largura)
+        print(decoded.size())
+        decoded = decoded.view(-1, 32, 10, 10)  # Ajustar a dimensão para (batch_size, canais, altura, largura)
         decoded = self.decoder(decoded)
         return encoded, decoded
+'''
 
+class AutoEncoder(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+
+        # Encoder
+        self.encoder = torch.nn.Sequential(
+            torch.nn.Conv2d(in_channels=4, out_channels=16, kernel_size=(8, 8), padding=3),
+            torch.nn.Dropout(.2),
+            torch.nn.BatchNorm2d(num_features=16),
+            torch.nn.PReLU(),
+            torch.nn.Conv2d(in_channels=16, out_channels=32, kernel_size=(7, 7), padding=3),
+            torch.nn.Dropout(.2),
+            torch.nn.BatchNorm2d(num_features=32),
+            torch.nn.PReLU()
+        )
+
+        # correctly output dimension of conv layer before flatten
+        dummy_input = torch.randn(1, 4, 50, 50)
+        conv_out = self.encoder(dummy_input)
+        self.flattened_size = conv_out.view(-1).size(0)
+        self.conv_output_shape = conv_out.size()[1:]  # all dimensions but batch size
+
+        self.fc1 = torch.nn.Linear(in_features=self.flattened_size, out_features=64)
+        self.fc2 = torch.nn.Linear(in_features=64, out_features=3)
+        
+        self.decoder_fc1 = torch.nn.Linear(in_features=3, out_features=64)
+        self.decoder_fc2 = torch.nn.Linear(in_features=64, out_features=self.flattened_size)
+
+        self.decoder = torch.nn.Sequential(
+            torch.nn.ConvTranspose2d(in_channels=32, out_channels=16, kernel_size=(7, 7), padding=3),
+            torch.nn.ReLU(),
+            torch.nn.ConvTranspose2d(in_channels=16, out_channels=4, kernel_size=(8, 8), padding=3),
+            torch.nn.ReLU()
+        )
+
+    def forward(self, x):
+        conv_encoded = self.encoder(x)
+        encoded = conv_encoded.view(conv_encoded.size(0), -1)
+        encoded = F.relu(self.fc1(encoded))
+        encoded = self.fc2(encoded)
+        decoded = F.relu(self.decoder_fc1(encoded))
+        decoded = F.relu(self.decoder_fc2(decoded))
+
+        # A(batch_size, canais, altura, largura)
+        batch_size = decoded.size(0)
+        decoded = decoded.view(batch_size, *self.conv_output_shape)
+        
+        decoded = self.decoder(decoded)
+        return encoded, decoded
 
 # Convert the training data to PyTorch tensors
 # X_train = torch.from_numpy(X_train40)
@@ -214,7 +268,7 @@ criterion = torch.nn.MSELoss()
 
 
 # Training loop
-for epoch in range(num_epochs):
+'''for epoch in range(num_epochs):
     total_loss = 0.0
     for batch_idx, (inputs, targets) in enumerate(train_loader40):
         # Get a batch of training data and move it to the device
@@ -236,6 +290,54 @@ for epoch in range(num_epochs):
     epoch_loss = total_loss / len(train_loader40.dataset)
     print(
         "Epoch {}/{}: loss={:.4f}".format(epoch + 1, num_epochs, epoch_loss)
-    )
+    )'''
 
+# init lists for the history of loss and r²
+loss_history = []
+r2_history = []
 
+# Training loop
+for epoch in range(num_epochs):
+    total_loss = 0.0
+    epoch_r2 = 0.0
+    
+    for batch_idx, (inputs, targets) in enumerate(train_loader40):
+        # Forward pass
+        encoded, decoded = model(inputs)
+
+        # Compute the loss
+        loss = criterion(decoded, inputs)
+        
+        # Compute R^2
+        r2 = r2_score(inputs.view(-1).detach().numpy(), decoded.view(-1).detach().numpy())
+        
+        # Perform backpropagation
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        # Update the running loss and R^2
+        total_loss += loss.item() * inputs.size(0)
+        epoch_r2 += r2 * inputs.size(0)
+
+    # Calculate average loss and R^2 for the epoch
+    epoch_loss = total_loss / len(train_loader40.dataset)
+    epoch_r2 /= len(train_loader40.dataset)
+    
+    # Print the epoch loss and R^2
+    print("Epoch {}/{}: Loss={:.4f}, R^2={:.4f}".format(epoch + 1, num_epochs, epoch_loss, epoch_r2))
+    
+    # Append the loss and R^2 to the history lists
+    loss_history.append(epoch_loss)
+    r2_history.append(epoch_r2)
+
+# Plot loss and R^2 curves
+plt.figure(figsize=(10, 5))
+plt.plot(range(1, num_epochs + 1), loss_history, label='Loss')
+plt.plot(range(1, num_epochs + 1), r2_history, label='$R^2$')
+plt.xlabel('Epochs')
+plt.ylabel('Value')
+plt.title('Training Loss and $R^2$')
+plt.legend()
+plt.grid(True)
+plt.show()
