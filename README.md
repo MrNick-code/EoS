@@ -25,7 +25,9 @@ grid_search_2.py\
 importFlow.py
 
 ## VAE
-vae_to_flow.py ***
+vae_to_flow.py \
+vae_to_flow_2.py *\
+vae_to_flow_3.py ***\
 
 ## CVAE
 cvae_to_flow.py (empty)
