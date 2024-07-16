@@ -26,8 +26,8 @@ importFlow.py
 
 ## VAE
 vae_to_flow.py \
-vae_to_flow_2.py *\
-vae_to_flow_3.py ***\
+vae_to_flow_2.py \
+vae_to_flow_3.py ***
 
 ## CVAE
 cvae_to_flow.py (empty)
