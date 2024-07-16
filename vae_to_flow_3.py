@@ -4,24 +4,54 @@ import torch.nn.functional as F
 from torch.utils.data import TensorDataset, DataLoader
 from sklearn.metrics import r2_score
 import data_man_pick as dmp
+import numpy as np
 import matplotlib.pyplot as plt
+import cv2
 
 EOSXimgs_40 = ["D:/Users/mathe/ML/EoS/IMG_DATA/EOSL_low_40b", "D:/Users/mathe/ML/EoS/IMG_DATA/EOSQ_low_40"] # Path (50x50 imgs)
+EOSXimgs_50 = ["D:/Users/mathe/ML/EoS/IMG_DATA/EOSL_low_50", "D:/Users/mathe/ML/EoS/IMG_DATA/EOSQ_low_50"] # Path (60x60 imgs)
 
-learning_rate, batch_size, num_epochs = 1e-5, 64, 50 # Training (initial: 1e-4, 64)
+learning_rate, batch_size, num_epochs = 1e-4, 4, 20 # Training (initial: 1e-4, 64)
+common_size = (50, 50)
 patience, min_delta = 5, 1e-4 # Callback
 alpha, betta, gamma = 1, .5, 5 # Loss proportion (initial: 1, .5, 5)
 
 X_train40, X_val40, X_test40, Y_train40, Y_val40, Y_test40 = dmp.get_data(paths=EOSXimgs_40, shape=(50, 50, 4)) # Load data
+X_train50, X_val50, X_test50, Y_train50, Y_val50, Y_test50 = dmp.get_data(paths=EOSXimgs_50, shape=(60, 60, 4))
 
 # Normalization function
 def normalize(train, val, test):
     return train / 255, val / 255, test / 255
 
 X_train40, X_val40, X_test40 = normalize(X_train40, X_val40, X_test40) # Normalize data
+X_train50, X_val50, X_test50 = normalize(X_train50, X_val50, X_test50)
+
+# resize images shape to match input shape inside the network
+def resize_images(images, size):
+    resized_images = []
+    for img in images:
+        resized_img = cv2.resize(img, size, interpolation=cv2.INTER_AREA)
+        resized_images.append(resized_img)
+    return np.array(resized_images)
 
 # [Num samples, Hidht, Weight, Chanells] --> [Num samples, Chanells, Hidht, Weight]
-def NCHW(trainX, valX, testX, trainY, valY, testY):
+def NCHW(trainX, valX, testX, trainY, valY, testY, trainX2, valX2, testX2, trainY2, valY2, testY2, cs=common_size):
+
+    trainX = resize_images(trainX, cs)
+    valX = resize_images(valX, cs)
+    testX = resize_images(testX, cs)
+
+    trainX2 = resize_images(trainX2, cs)
+    valX2 = resize_images(valX2, cs)
+    testX2 = resize_images(testX2, cs)
+
+    trainX = np.concatenate((trainX, trainX2), axis=0)
+    valX = np.concatenate((valX, valX2), axis=0)
+    testX = np.concatenate((testX, testX2), axis=0)
+    trainY = np.concatenate((trainY, trainY2), axis=0)
+    valY = np.concatenate((valY, valY2), axis=0)
+    testY = np.concatenate((testY, testY2), axis=0)
+
     b = [torch.from_numpy(j).float() for j in [trainY, valY, testY]]
     a = [torch.from_numpy(i).float().permute(0, 3, 1, 2) for i in [trainX, valX, testX]]
 
@@ -29,13 +59,15 @@ def NCHW(trainX, valX, testX, trainY, valY, testY):
     val_dataset = TensorDataset(a[1], b[1])
     test_dataset = TensorDataset(a[2], b[2])
 
+
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
     return train_loader, val_loader, test_loader
 
-train_loader40, val_loader40, test_loader40 = NCHW(X_train40, X_val40, X_test40, Y_train40, Y_val40, Y_test40) # Transform data
+train_loader40, val_loader40, test_loader40 = NCHW(X_train40, X_val40, X_test40, Y_train40, Y_val40, Y_test40,
+                                                   X_train50, X_val50, X_test50, Y_train50, Y_val50, Y_test50) # Transform data
 
 # Convolutional VAE
 class ConvVariationalAutoEncoder(nn.Module):
@@ -63,6 +95,7 @@ class ConvVariationalAutoEncoder(nn.Module):
         # Latent space
         self.fc_mu = nn.Linear(in_features=self.flattened_size, out_features=3)
         self.fc_logvar = nn.Linear(in_features=self.flattened_size, out_features=3)
+        self.fc_pred = nn.Linear(in_features=3, out_features=3)
 
         # Decoder
         self.decoder_fc1 = nn.Linear(in_features=3, out_features=64)
@@ -74,8 +107,6 @@ class ConvVariationalAutoEncoder(nn.Module):
             nn.ConvTranspose2d(in_channels=16, out_channels=4, kernel_size=(8, 8), padding=3),
             nn.ReLU()
         )
-
-        self.fc_pred = nn.Linear(in_features=3, out_features=3)
 
     def reparameterize(self, mu, logvar):
         std = torch.exp(0.5 * logvar)
@@ -200,7 +231,7 @@ for epoch in range(num_epochs):
     val_loss_history.append(val_epoch_loss)
     val_r2_history.append(val_epoch_r2)
 
-    print("Epoch {}/{}: Train Loss={:.4f}, Train R²={:.4f}, Val Loss={:.4f}, Val R²={:.4f}".format(
+    print("\033[31;1mEpoch {}/{}\033[m: Train Loss={}, Train R²={:.4f}, Val Loss={}, Val R²={:.4f}".format(
         epoch + 1, num_epochs, train_epoch_loss, train_epoch_r2, val_epoch_loss, val_epoch_r2))
     
     '''early_stopping(val_epoch_loss)
@@ -257,6 +288,7 @@ plt.show()
 ### Results Analysis
 vae_model.eval()
 predictions, real_values = [], []
+first_iteration = True
 
 with torch.no_grad():
     for inputs, targets in test_loader40:
@@ -265,15 +297,21 @@ with torch.no_grad():
         predictions.append(predicted_values)  # Y^
         real_values.append(targets)  # Y
 
-        show_images(inputs, decoded)
-        break  # Remova o 'break' se quiser iterar por todo o conjunto de testes !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        if first_iteration:
+            show_images(inputs, decoded)
+            first_iteration = False
+
 
 # Single arrays
 predictions = torch.cat(predictions, dim=0).cpu().numpy()
 real_values = torch.cat(real_values, dim=0).cpu().numpy()
 
-print(f'real_val: {real_values.shape}')
-print(f'predic: {predictions.shape}')
+print(f'real_value shape: {real_values.shape}')
+print(f'prediction shape: {predictions.shape}')
+
+print(f'\033[32;1mV2² test R²: {r2_score(real_values[0], predicted_values[0])}\033[m')
+print(f'\033[32;1mV3² test R²: {r2_score(real_values[1], predicted_values[1])}\033[m')
+print(f'\033[32;1mV4² test R²: {r2_score(real_values[2], predicted_values[2])}\033[m')
 
 # scatter plot real vs predictions v2², v3² & v4²
 predictions = predictions[:, :3]
