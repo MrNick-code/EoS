@@ -1,5 +1,5 @@
 # EoS - Files
-* means relevant, ** means extra relevant, *** VAE/CVAE relevant;
+* means relevant, ** means extra relevant, *** VAE relevant, † CVAE relevant;
 
 ## Data creation/manipulation
 Cut_imgs.py\
