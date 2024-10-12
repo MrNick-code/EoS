@@ -76,17 +76,17 @@ class manipulation:
 dir1 = "D:/Users/mathe/ML/EoS/DATA/EOS_vn/EOSL"
 dir2 = "D:/Users/mathe/ML/EoS/DATA/EOS_vn/EOSQ"
 
-#eosl_data = manipulation(dir1)
-#pxl, pyl, particles_l = eosl_data.get_columns()
-#ptl = eosl_data.pt_calc()
-#phifl = eosl_data.phi_calc()
+eosl_data = manipulation(dir1)
+pxl, pyl, particles_l = eosl_data.get_columns()
+ptl = eosl_data.pt_calc()
+phifl = eosl_data.phi_calc()
 
 eosq_data = manipulation(dir2)
 pxq, pyq, particles_q = eosq_data.get_columns()
 ptq = eosq_data.pt_calc()
 phifq = eosq_data.phi_calc()
 
-#data_per_event = []
+data_per_event = []
 data_per_event2 = []
 
 class events_class:
@@ -118,14 +118,14 @@ class events_class:
             phi_event_n += [phi_event]
         return event_n, pt_event_n, phi_event_n
 
-#eosl_event_data = events_class(data_per_event, particles_l, ptl, phifl)
-#images, pts, phis = eosl_event_data.all_events()
+eosl_event_data = events_class(data_per_event, particles_l, ptl, phifl)
+images, pts, phis = eosl_event_data.all_events()
 
 eosq_event_data = events_class(data_per_event2, particles_q, ptq, phifq)
 images2, pts2, phis2 = eosq_event_data.all_events()
 print('-=-=-=-=-=-=-=-')
 
-def create_data(pts_, phis_, nOevents=2000, bin_=(50, 50), save_path=None):
+def create_data(pts_, phis_, nOevents=2000, bin_=(80, 80), save_path=None):
     final_data = []
     for i in range(0, nOevents):
 
@@ -151,7 +151,7 @@ def create_data(pts_, phis_, nOevents=2000, bin_=(50, 50), save_path=None):
         if save_path:
             filename = f'{save_path}/figure__{i+1}.png'
             plt.gcf().set_size_inches(1, 1)
-            plt.savefig(filename, format='png', dpi=60) # tirei o tight e inches=0 ### DPI = BIN + 10
+            plt.savefig(filename, format='png', dpi=90) # tirei o tight e inches=0 ### DPI = BIN + 10
             #plt.savefig(filename, format='png')           
             final_data.append(filename)
         else:
@@ -164,5 +164,5 @@ def create_data(pts_, phis_, nOevents=2000, bin_=(50, 50), save_path=None):
 
     return final_data
 
-#data_eosl = create_data(pts, phis, save_path="D:/Users/mathe/ML/EoS/IMG_DATA/EOSL_low_50")
-data_eosq = create_data(pts2, phis2, save_path="D:/Users/mathe/ML/EoS/IMG_DATA/EOSQ_low_50")
+data_eosl = create_data(pts, phis, save_path="D:/Users/mathe/ML/EoS/IMG_DATA/EOSL_low_80")
+data_eosq = create_data(pts2, phis2, save_path="D:/Users/mathe/ML/EoS/IMG_DATA/EOSQ_low_80")

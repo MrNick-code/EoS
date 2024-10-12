@@ -8,23 +8,30 @@ import numpy as np
 import matplotlib.pyplot as plt
 import cv2
 
+# Data paths
 EOSXimgs_40 = ["D:/Users/mathe/ML/EoS/IMG_DATA/EOSL_low_40b", "D:/Users/mathe/ML/EoS/IMG_DATA/EOSQ_low_40"] # Path (50x50 imgs)
 EOSXimgs_50 = ["D:/Users/mathe/ML/EoS/IMG_DATA/EOSL_low_50", "D:/Users/mathe/ML/EoS/IMG_DATA/EOSQ_low_50"] # Path (60x60 imgs)
+EOSXimgs_80 = ["D:\\Users\\mathe\\ML\\EoS\\IMG_DATA\\EOSL_low_80", "D:\\Users\\mathe\\ML\\EoS\\IMG_DATA\\EOSQ_low_80"] # Path (90x90 imgs)
 
-learning_rate, batch_size, num_epochs = 1e-4, 4, 20 # Training (initial: 1e-4, 64)
-common_size = (50, 50)
-patience, min_delta = 5, 1e-4 # Callback
-alpha, betta, gamma = 1, .5, 5 # Loss proportion (initial: 1, .5, 5)
+learning_rate, batch_size, num_epochs = 1e-4, 8, 20 # Training HPs (initial: 1e-4, 64)
+common_size = (50, 50) # Input HPs
+patience, min_delta = 5, 1e-4 # Callback (not using/working)
+alpha, betta, gamma = 10, 1, 1 # Loss proportion HPs (initial: 1, .5, 5)
+nt = 255 # Normalization HPs (intial(max): 255)
 
-X_train40, X_val40, X_test40, Y_train40, Y_val40, Y_test40 = dmp.get_data(paths=EOSXimgs_40, shape=(50, 50, 4)) # Load data
+# Load data
+X_train40, X_val40, X_test40, Y_train40, Y_val40, Y_test40 = dmp.get_data(paths=EOSXimgs_40, shape=(50, 50, 4))
 X_train50, X_val50, X_test50, Y_train50, Y_val50, Y_test50 = dmp.get_data(paths=EOSXimgs_50, shape=(60, 60, 4))
+X_train80, X_val80, X_test80, Y_train80, Y_val80, Y_test80 = dmp.get_data(paths=EOSXimgs_80, shape=(90, 90, 4))
 
 # Normalization function
-def normalize(train, val, test):
-    return train / 255, val / 255, test / 255
+def normalize(train, val, test, normalization_term=nt):
+    return train / normalization_term, val / normalization_term, test / normalization_term
 
-X_train40, X_val40, X_test40 = normalize(X_train40, X_val40, X_test40) # Normalize data
+# Normalize data
+X_train40, X_val40, X_test40 = normalize(X_train40, X_val40, X_test40)
 X_train50, X_val50, X_test50 = normalize(X_train50, X_val50, X_test50)
+X_train80, X_val80, X_test80 = normalize(X_train80, X_val80, X_test80)
 
 # resize images shape to match input shape inside the network
 def resize_images(images, size):
@@ -34,8 +41,10 @@ def resize_images(images, size):
         resized_images.append(resized_img)
     return np.array(resized_images)
 
+# Transform tensor form in torch form
 # [Num samples, Hidht, Weight, Chanells] --> [Num samples, Chanells, Hidht, Weight]
-def NCHW(trainX, valX, testX, trainY, valY, testY, trainX2, valX2, testX2, trainY2, valY2, testY2, cs=common_size):
+def NCHW(trainX, valX, testX, trainY, valY, testY, trainX2, valX2, testX2, trainY2, valY2, testY2,
+          trainX3, valX3, testX3, trainY3, valY3, testY3, cs=common_size):
 
     trainX = resize_images(trainX, cs)
     valX = resize_images(valX, cs)
@@ -45,12 +54,16 @@ def NCHW(trainX, valX, testX, trainY, valY, testY, trainX2, valX2, testX2, train
     valX2 = resize_images(valX2, cs)
     testX2 = resize_images(testX2, cs)
 
-    trainX = np.concatenate((trainX, trainX2), axis=0)
-    valX = np.concatenate((valX, valX2), axis=0)
-    testX = np.concatenate((testX, testX2), axis=0)
-    trainY = np.concatenate((trainY, trainY2), axis=0)
-    valY = np.concatenate((valY, valY2), axis=0)
-    testY = np.concatenate((testY, testY2), axis=0)
+    trainX3 = resize_images(trainX3, cs)
+    valX3 = resize_images(valX3, cs)
+    testX3 = resize_images(testX3, cs)
+
+    trainX = np.concatenate((trainX, trainX2, trainX3), axis=0)
+    valX = np.concatenate((valX, valX2, valX3), axis=0)
+    testX = np.concatenate((testX, testX2, testX3), axis=0)
+    trainY = np.concatenate((trainY, trainY2, trainY3), axis=0)
+    valY = np.concatenate((valY, valY2, valY3), axis=0)
+    testY = np.concatenate((testY, testY2, testY3), axis=0)
 
     b = [torch.from_numpy(j).float() for j in [trainY, valY, testY]]
     a = [torch.from_numpy(i).float().permute(0, 3, 1, 2) for i in [trainX, valX, testX]]
@@ -66,8 +79,10 @@ def NCHW(trainX, valX, testX, trainY, valY, testY, trainX2, valX2, testX2, train
 
     return train_loader, val_loader, test_loader
 
+# Transform data
 train_loader40, val_loader40, test_loader40 = NCHW(X_train40, X_val40, X_test40, Y_train40, Y_val40, Y_test40,
-                                                   X_train50, X_val50, X_test50, Y_train50, Y_val50, Y_test50) # Transform data
+                                                   X_train50, X_val50, X_test50, Y_train50, Y_val50, Y_test50,
+                                                   X_train80, X_val80, X_test80, Y_train80, Y_val80, Y_test80)
 
 # Convolutional VAE
 class ConvVariationalAutoEncoder(nn.Module):
@@ -76,12 +91,12 @@ class ConvVariationalAutoEncoder(nn.Module):
 
         # Encoder
         self.encoder = nn.Sequential(
-            nn.Conv2d(in_channels=4, out_channels=16, kernel_size=(8, 8), padding=3),
-            nn.Dropout(.2),
+            nn.Conv2d(in_channels=4, out_channels=16, kernel_size=(4, 4), padding=3),
+            nn.Dropout(.8),
             nn.BatchNorm2d(num_features=16),
             nn.PReLU(),
-            nn.Conv2d(in_channels=16, out_channels=32, kernel_size=(7, 7), padding=3),
-            nn.Dropout(.2),
+            nn.Conv2d(in_channels=16, out_channels=32, kernel_size=(3, 3), padding=3),
+            nn.Dropout(.8),
             nn.BatchNorm2d(num_features=32),
             nn.PReLU()
         )
@@ -100,11 +115,10 @@ class ConvVariationalAutoEncoder(nn.Module):
         # Decoder
         self.decoder_fc1 = nn.Linear(in_features=3, out_features=64)
         self.decoder_fc2 = nn.Linear(in_features=64, out_features=self.flattened_size)
-
         self.decoder = nn.Sequential(
-            nn.ConvTranspose2d(in_channels=32, out_channels=16, kernel_size=(7, 7), padding=3),
+            nn.ConvTranspose2d(in_channels=32, out_channels=16, kernel_size=(3, 3), padding=3),
             nn.ReLU(),
-            nn.ConvTranspose2d(in_channels=16, out_channels=4, kernel_size=(8, 8), padding=3),
+            nn.ConvTranspose2d(in_channels=16, out_channels=4, kernel_size=(4, 4), padding=3),
             nn.ReLU()
         )
 
@@ -174,6 +188,39 @@ val_loss_history = []
 val_r2_history = []
 early_stopping = EarlyStopping(patience=patience, min_delta=min_delta)
 
+# Adaptative learning rate function
+class CustomReduceLROnPlateau:
+    def __init__(self, optimizer, factor=0.1, patience=2, min_lr=1e-6, min_improvement=1e-6):
+        self.optimizer = optimizer
+        self.factor = factor
+        self.patience = patience
+        self.min_lr = min_lr
+        self.min_improvement = min_improvement
+        self.wait = 0
+        self.best_loss = None
+
+    def step(self, loss):
+        if self.best_loss is None:
+            self.best_loss = loss
+            return
+
+        if self.best_loss - loss > self.min_improvement:
+            self.best_loss = loss
+            self.wait = 0
+        else:
+            self.wait += 1
+            if self.wait >= self.patience:
+                self._reduce_lr()
+                self.wait = 0
+
+    def _reduce_lr(self):
+        for param_group in self.optimizer.param_groups:
+            new_lr = max(param_group['lr'] * self.factor, self.min_lr)
+            if param_group['lr'] > new_lr:
+                print(f"Reducing learning rate from {param_group['lr']} to {new_lr}")
+                param_group['lr'] = new_lr
+scheduler = CustomReduceLROnPlateau(optimizer, factor=0.1, patience=2, min_lr=1e-6, min_improvement=1e-6)
+
 # Training & Validation
 for epoch in range(num_epochs):
     train_total_loss = 0.0
@@ -181,7 +228,7 @@ for epoch in range(num_epochs):
     
     vae_model.train()
     for inputs, targets in train_loader40:
-        targets = targets.view(-1, 3)  # targets must have the sasme shape as predicted_values!
+        targets = targets.view(-1, 3)  # targets must have the same shape as predicted_values!
 
         mu, logvar, decoded, predicted_values = vae_model(inputs)
 
@@ -194,6 +241,8 @@ for epoch in range(num_epochs):
 
         train_total_loss += loss.item()
         train_epoch_r2 += r2 * inputs.size(0)
+
+    scheduler.step(train_total_loss)
 
     print(f"Input shape: {inputs.shape}")
     print(f"Target shape: {targets.shape}")
@@ -230,6 +279,8 @@ for epoch in range(num_epochs):
     
     val_loss_history.append(val_epoch_loss)
     val_r2_history.append(val_epoch_r2)
+
+    print(f"\033[32;1mLearning Rate: {optimizer.param_groups[0]['lr']}\033[m")
 
     print("\033[31;1mEpoch {}/{}\033[m: Train Loss={}, Train R²={:.4f}, Val Loss={}, Val R²={:.4f}".format(
         epoch + 1, num_epochs, train_epoch_loss, train_epoch_r2, val_epoch_loss, val_epoch_r2))
