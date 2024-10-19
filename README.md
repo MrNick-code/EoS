@@ -30,4 +30,5 @@ vae_to_flow_2.py \
 vae_to_flow_3.py ***
 
 ## CVAE
+CVAE_classes.py † \
 cvae_to_flow.py (empty)
