@@ -7,46 +7,43 @@ import numpy as np
 from torch.utils.data import TensorDataset, DataLoader
 import cv2
 
+out_features = 64
+
 class cvae_function:
     
     def __init__(self, x, y):
         '''
         args
         - x ~ bayesian parameter v_n² 
-        - y ~ particle spectrum pho(P_t, phi)
+        - y ~ particle spectrum rho(P_t, phi)
         '''
         self.x = x
         self.y = y
         self.encoder2d = self.conv2D_layers()
         self.encoderLin = self.common_lin_layers()
-        self.reparameterize = self.reparameterize()
-        self.q_phi = self.q_phi()
-        self.r_theta1 = self.r_theta1()
-        self.r_theta2 = self.r_theta2()
+        self.q_phi = self.q_phi # no () cuz we want this to be
+        self.r_theta1 = self.r_theta1 # functions and not tuples!
+        self.r_theta2 = self.r_theta2
          
     def conv2D_layers(self):
         return nn.Sequential(
-            nn.Conv2d(in_channels=3, out_channels=96, kernel_size=64), # 1
-            nn.LeakyReLU(),
-            nn.Conv2d(in_channels=96, out_channels=96, kernel_size=32, stride=4), # 2
-            nn.LeakyReLU(),
-            nn.Conv2d(in_channels=96, out_channels=96, kernel_size=32), # 3
-            nn.LeakyReLU(),
-            nn.Conv2d(in_channels=96, out_channels=96, kernel_size=16, stride=2), # 4
-            nn.LeakyReLU(),
-            nn.Conv2d(in_channels=96, out_channels=96, kernel_size=16), # 5
-            nn.LeakyReLU(),
-            nn.Conv2d(in_channels=96, out_channels=96, kernel_size=16, stride=2), # 6
-            nn.LeakyReLU()
+            nn.Conv2d(in_channels=4, out_channels=16, kernel_size=(8, 8), padding=3),
+            nn.Dropout(.2),
+            nn.BatchNorm2d(num_features=16),
+            nn.PReLU(),
+            nn.Conv2d(in_channels=16, out_channels=32, kernel_size=(7, 7), padding=3),
+            nn.Dropout(.2),
+            nn.BatchNorm2d(num_features=32),
+            nn.PReLU()
         )
         
     def common_lin_layers(self):
         return nn.Sequential(
-            nn.Linear(in_features=6159, out_features=4096), # 7
+            nn.Linear(in_features=32, out_features=out_features), # 7
             nn.LeakyReLU(),
-            nn.Linear(in_features=4096, out_features=2048), # 8
+            nn.Linear(in_features=out_features, out_features=32), # 8
             nn.LeakyReLU(),
-            nn.Linear(in_features=2048, out_features=1024), # 9
+            nn.Linear(in_features=32, out_features=16), # 9
             nn.LeakyReLU()
         )
         
@@ -68,9 +65,14 @@ class cvae_function:
         
         xy = torch.cat((flattened_size, flattened_x), dim=1) # append(x)
         
+        
+        in_features = xy.shape[1] # formating porpuses
+        self.encoderLin[0] = nn.Linear(in_features=in_features, out_features=out_features)
+        
+        
         fc_out = self.encoderLin(xy) # apply fully conected layers
     
-        layer10 = nn.Linear(in_features=1024, out_features=30) # 10th layer
+        layer10 = nn.Linear(in_features=16, out_features=3) # 10th layer
         mu_q = layer10(fc_out)
         logvar_q = layer10(fc_out)
         return mu_q, logvar_q
@@ -89,9 +91,12 @@ class cvae_function:
         
         flattened_y = conv_out.view(conv_out.size(0), -1) # flatten layer
         
+        in_features = flattened_y.shape[1] # formating porpuses
+        self.encoderLin[0] = nn.Linear(in_features=in_features, out_features=out_features) 
+        
         fc_out = self.encoderLin(flattened_y) # apply fully conected layers
         
-        layer10 = nn.Linear(in_features=1024, out_features=960) # 10th layer
+        layer10 = nn.Linear(in_features=16, out_features=3) # 10th layer
         mu_r1 = layer10(fc_out)
         logvar_r1 = layer10(fc_out)       
         return mu_r1, logvar_r1
@@ -111,13 +116,18 @@ class cvae_function:
         
         zy = torch.cat((flattened_y, z_q), dim=1) # append(z)
         
+        in_features = zy.shape[1] # formating porpuses
+        self.encoderLin[0] = nn.Linear(in_features=in_features, out_features=out_features) 
+        
         fc_out = self.encoderLin(zy)
         
-        layer10 = nn.Linear(in_features=1024, out_features=30) # 10th layer
-        layer10a = nn.Sigmoid(layer10)
-        layer10b = nn.ReLU(layer10)
-        mu_r2 = layer10a(fc_out)
-        logvar_r2 = -layer10b(fc_out)       
+        layer10 = nn.Linear(in_features=16, out_features=3) # 10th layer
+        
+        layer10a = nn.Sigmoid() # instantiating
+        layer10b = nn.ReLU()
+        
+        mu_r2 = layer10a(layer10(fc_out))
+        logvar_r2 = -layer10b(layer10(fc_out))       
         return mu_r2, logvar_r2
 
     def reparameterize(self, mu, logvar):
@@ -135,45 +145,55 @@ class cvae_function:
         eps = torch.randn_like(std)        
         return mu + eps * std
     
-    def latent_space_space(self, space_spec=''):
+    def latent_space_space(self, space_spec='', zn=None):
+        '''
+        args
+        - zn ~ diferentiate r2theta function with input zq or zr (defaul 0)
+          space_spec ~ define which function we're using
+        '''
 
-        self.fc_mu = nn.Linear(in_features=self.flattened_size, out_features=3)
-        self.fc_logvar = nn.Linear(in_features=self.flattened_size, out_features=3)        
+        #self.fc_mu = nn.Linear(in_features=self.flattened_size, out_features=3) # essas linhas são assim mesmo?
+        #self.fc_logvar = nn.Linear(in_features=self.flattened_size, out_features=3)        
         '''
         desc
         - outputs the latent space using q_phi function
+        
+        
+        desc
+        - outputs the latent space using r_theta1 function
+
+        returns
+        - z_r ~ samples from the r_theta1 latent space representation
+        
+        
+        desc
+        - outputs the latent space using r_theta2 function
+
+        returns
+        - x_samp ~ samples from the r_theta2 latent space representation
         '''
         if space_spec == 'train':
             mu_q, logvar_q = self.q_phi()
             mu, logvar = mu_q, logvar_q
             z = self.reparameterize(mu_q, logvar_q) # z_q
         
-        '''
-        desc
-        - outputs the latent space using r_theta1 function
-
-        returns
-        - z_r ~ samples from the r_theta1 latent space representation
-        '''
-        if space_spec == 'test':
+        elif space_spec == 'test':
             mu_r, logvar_r = self.r_theta1()
             mu, logvar = mu_r, logvar_r
             z = self.reparameterize(mu_r, logvar_r) # z_r
         
-        '''
-        desc
-        - outputs the latent space using r_theta2 function
-
-        returns
-        - x_samp ~ samples from the r_theta2 latent space representation
-        ''' 
-        if space_spec == 'output':
-            mu_r, logvar_r = self.r_theta2()
-            mu, logvar = mu_r, logvar_r
-            z = self.reparameterize(mu_r, logvar_r) # x_samp
+        elif space_spec == 'output':
+            
+            if zn is None:
+                raise ValueError('you must provide an correctly zn (zq or zr)')
+            else:                  
+                mu_r, logvar_r = self.r_theta2(zn) # was forgetting the r_theta2 input!
+                    
+                mu, logvar = mu_r, logvar_r
+                z = self.reparameterize(mu_r, logvar_r) # x_samp
             
         else:
-            print('space_spec argument does not exist!')     
+            print(f'Invalid space_spec value: {space_spec}')  
         return mu, logvar, z
 
 # ---------------------------------------------------------------------------------
