@@ -30,5 +30,6 @@ vae_to_flow_2.py \
 vae_to_flow_3.py ***
 
 ## CVAE
+data_man_pick_copy.py † \
 CVAE_classes.py † \
-cvae_to_flow.py (empty)
+cvae_to_flow.py †
