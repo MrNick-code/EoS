@@ -7,10 +7,15 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import r2_score
 print(f"CPU memory in use: {psutil.Process(getpid()).memory_info().rss} bytes")
 
+# cuda stuff
+#device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+#print(f"Using device: {device}")
+
+
 EOSXimgs_40 = ["C:\\Users\\mathe\\faculdade\\ML\\EoS\\IMG_DATA\\EOSL_low_40b", "C:\\Users\\mathe\\faculdade\\ML\\EoS\\IMG_DATA\\EOSQ_low_40"] # Path (50x50 imgs)
 EOSXimgs_50 = ["C:\\Users\\mathe\\faculdade\\ML\\EoS\\IMG_DATA\\EOSL_low_50", "C:\\Users\\mathe\\faculdade\\ML\\EoS\\IMG_DATA\\EOSQ_low_50"] # Path (60x60 imgs)
 
-common_size, batch_size, num_epochs, learning_rate, normalization_term = (50, 50), 8, 30, 2e-5, 255
+common_size, batch_size, num_epochs, learning_rate, normalization_term = (50, 50), 8, 10, 2e-5, 255
 
 data_loader = cc.cvae_load(nt=normalization_term)
 
@@ -34,6 +39,7 @@ class ConditionalVariationalAutoEncoder(nn.Module):
         self.encoderLin = cc.cvae_function.common_lin_layers(self)
     
     def forward(self, inputs): # must have torch function for later uses
+        print("Passando pelo encoderLin")
         return self.doFunc(spec='forward', inputs=inputs)
     
     def doFunc(self, spec='', inputs=None):
@@ -52,9 +58,9 @@ class ConditionalVariationalAutoEncoder(nn.Module):
           rsq    ~ r squared metric
         '''
         # print(self.y1)
-        a = cc.cvae_function(self.x1, self.y1)
-        a2 = cc.cvae_function(self.x2, self.y2)
-        b = cc.cvae_function(self.x3, self.y3)
+        a = cc.cvae_function(self.x1, self.y1)  # train set
+        a2 = cc.cvae_function(self.x2, self.y2) # val set
+        b = cc.cvae_function(self.x3, self.y3)  # test set
         
         # print(f"a.x e a.y sizes: {a.x.size()}, {a.y.size()}")
         
@@ -81,7 +87,8 @@ class ConditionalVariationalAutoEncoder(nn.Module):
         
         elif spec == 'forward':  # forward pass case
             encoded_2d_output = self.encoder2d(inputs)
-            self.encoderLin = nn.Linear(76832, 3)
+            
+            self.encoderLin[0] = nn.Linear(76832, 3)
             
             #print(f'encoded_2d_output shape: {encoded_2d_output.shape}')
             flattened_output = encoded_2d_output.view(encoded_2d_output.size(0), -1)  # Flatten: [8, 32*49*49]
@@ -94,6 +101,10 @@ class ConditionalVariationalAutoEncoder(nn.Module):
         else:
             print(f'non existent spec value: {spec}')
             return None, None, None, None, None
+
+
+        #print(f"Spec: {spec}, TotalLoss: {TotalLoss}, R²: {rsq}")
+        
         
         return z_q, z_r, x_samp, TotalLoss, rsq
 
@@ -104,6 +115,7 @@ test_y, test_x = next(iter(test_loader))
 print(train_y.shape)
 print(len(train_y))
 print(train_x)
+
 network = ConditionalVariationalAutoEncoder(train_x, val_x, test_x, train_y, val_y, test_y)
 optimizer = torch.optim.Adam(network.parameters(), lr=learning_rate)
 
@@ -122,8 +134,6 @@ for epoch in range(num_epochs):
     for inputs, targets in train_loader:
         #print(f"inputs size (x): {inputs.size()}")
         #print(f"targets size (y): {targets.size()}") 
-        targets = targets.view(-1, 3)
-        
         z_q, z_r, x_samp, TotalLoss, rsq = network.doFunc(spec='a')
         
         #print(f"z_q size: {z_q.size()}")
@@ -133,15 +143,35 @@ for epoch in range(num_epochs):
         #print(f"TotalLoss: {TotalLoss}")
         
         optimizer.zero_grad()
+        
+        #print(network.encoderLin[0].weight.grad)
+        #for param_group in optimizer.param_groups:
+        #    print(param_group['params'])
+
+        #print(f"Loss antes do backward: {TotalLoss.item()}")
+        #before_update = network.encoderLin[0].weight.clone()
+        #print("Pesos antes da atualização:", network.encoderLin[0].weight)
+        
+        # print("Gradiente de encoderLin:", network.encoderLin[0].weight.grad)
+        
         TotalLoss.backward()
         optimizer.step()
         
-        train_total_loss += TotalLoss.item()
+        
+        #after_update = network.encoderLin[0].weight.clone()
+        #print("Pesos após a atualização:", network.encoderLin[0].weight)
+        #print(f"Pesos mudaram: {not torch.equal(before_update, after_update)}")
+        #for name, param in network.named_parameters():
+        #    if param.grad is not None:
+        #        print(f"Gradiente de {name}: {param.grad.abs().mean().item()}")
+        
+        
+        train_total_loss += TotalLoss.item() # train_total_loss += TotalLoss.detach().cpu().numpy()
         train_epoch_r2 += rsq * inputs.size(0)
 
-    print(f"Input shape: {inputs.shape}")
-    print(f"Target shape: {targets.shape}")
-    print(f"Predicted shape: {x_samp.shape}")
+    #print(f"Input shape: {inputs.shape}")
+    #print(f"Target shape: {targets.shape}")
+    #print(f"Predicted shape: {x_samp.shape}")
     
     train_epoch_loss = train_total_loss / len(train_loader.dataset)
     train_epoch_r2 /= len(train_loader.dataset)
@@ -162,9 +192,9 @@ for epoch in range(num_epochs):
             val_total_loss += ValTotalLoss.item()
             val_epoch_r2 += Valrsq * inputs.size(0)
             
-    print(f"Validation Input shape: {inputs.shape}")
-    print(f"Validation Target shape: {targets.shape}")
-    print(f"Validation Predicted shape: {x_samp.shape}")
+    #print(f"Validation Input shape: {inputs.shape}")
+    #print(f"Validation Target shape: {targets.shape}")
+    #print(f"Validation Predicted shape: {x_samp.shape}")
     
     val_epoch_loss = val_total_loss / len(val_loader.dataset)
     val_epoch_r2 /= len(val_loader.dataset)

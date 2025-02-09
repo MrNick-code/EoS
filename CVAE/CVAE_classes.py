@@ -9,7 +9,7 @@ import cv2
 
 out_features = 64
 
-class cvae_function:
+class cvae_function(nn.Module):
     
     def __init__(self, x, y):
         '''
@@ -17,6 +17,7 @@ class cvae_function:
         - x ~ bayesian parameter v_n² 
         - y ~ particle spectrum rho(P_t, phi)
         '''
+        super(cvae_function, self).__init__() 
         self.x = x
         self.y = y
         self.encoder2d = self.conv2D_layers()
@@ -46,11 +47,11 @@ class cvae_function:
             nn.Linear(in_features=32, out_features=16), # 9
             nn.LeakyReLU()
         )
-        
+    
     def q_phi(self):
         '''
         desc
-        - q_phi(z|, x, y) ~ "recognition" encoder network
+        - q_phi(z|x, y) ~ "recognition" encoder network
           where,
             phi ~ trainable parameter set
             z   ~ locations within a latent space
@@ -66,6 +67,7 @@ class cvae_function:
         xy = torch.cat((flattened_size, flattened_x), dim=1) # append(x)
         
         
+        #print(f"Self encoder Lin: {self.encoderLin}")
         in_features = xy.shape[1] # formating porpuses
         self.encoderLin[0] = nn.Linear(in_features=in_features, out_features=out_features)
         
@@ -104,7 +106,7 @@ class cvae_function:
     def r_theta2(self, z_q):
         '''
         desc
-        - r_theta2(x|, y, z) ~ decoder network
+        - r_theta2(x|y, z) ~ decoder network
         args
         - z_q ~ samples from the q_phi latent space representation
         returns
