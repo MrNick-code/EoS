@@ -1,6 +1,6 @@
 # Machine Learning Applied to Relativistic Heavy Ion Collision
 
-Flow harmonics characterize the anisotropic expansion of the QGP and help in understanding the fundamental aspects of quantum chromodynamics (QCD). Evaluating flow harmonics in heavy-ion collisions is crucial because they provide insights into the properties of the quark-gluon plasma (QGP), a state of matter that existed in the early universe (arXiv:2304.00336).
+Flow harmonics characterize the anisotropic expansion of the QGP and help in understanding the fundamental aspects of quantum chromodynamics (QCD). Evaluating flow harmonics (arXiv:2304.00336) in heavy-ion collisions is crucial because they provide insights into the properties of the quark-gluon plasma (QGP), a state of matter that existed in the early universe.
 
 ## Data creation/manipulation
 The Data folder is where the dataset is created. Starting from the MUSIC RHIC text files, the heat maps are created based on the transversium momentum and the azimuthal angle of all particles in a event, which each event correspond to a single image in the dataset. The "Eos_inputrework_fast.py" is how this data ins transformed and "pixel_analysis.py" is a self prove of how the heat maps trully represents the original data. 
