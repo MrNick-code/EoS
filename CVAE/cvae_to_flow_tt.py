@@ -7,6 +7,7 @@ import cv2
 import numpy as np
 from torch.utils.data import TensorDataset, DataLoader
 from sklearn.metrics import r2_score
+import matplotlib.pyplot as plt
 
 # cuda setup
 device = torch.device("cuda")
@@ -17,7 +18,7 @@ out_features = 64
 EOSXimgs_40 = ["C:\\Users\\mathe\\faculdade\\ML\\EoS\\IMG_DATA\\EOSL_low_40b", "C:\\Users\\mathe\\faculdade\\ML\\EoS\\IMG_DATA\\EOSQ_low_40"] # Path (50x50 imgs)
 EOSXimgs_50 = ["C:\\Users\\mathe\\faculdade\\ML\\EoS\\IMG_DATA\\EOSL_low_50", "C:\\Users\\mathe\\faculdade\\ML\\EoS\\IMG_DATA\\EOSQ_low_50"] # Path (60x60 imgs)
 
-common_size, batch_size, num_epochs, learning_rate, normalization_term = (50, 50), 100, 500, 2e-5, 255
+common_size, batch_size, num_epochs, learning_rate, normalization_term = (50, 50), 8, 50, 1e-3, 200
 
 class cvae_load:
     
@@ -91,10 +92,13 @@ train_loader, val_loader, test_loader = data_loader.NCHW(
                 cs=common_size, bs=batch_size)
 
 class ConditionalVariationalAutoEncoder(nn.Module):
-    def __init__(self, x, y):
+    def __init__(self, x, y, out_features):
         super().__init__()
         self.x = x.to(device)
         self.y = y.to(device)
+        self.out_features = out_features
+
+        # Encoder convolucional
         self.encoder2d = nn.Sequential(
             nn.Conv2d(in_channels=4, out_channels=16, kernel_size=(8, 8), padding=3),
             nn.Dropout(.2),
@@ -103,110 +107,89 @@ class ConditionalVariationalAutoEncoder(nn.Module):
             nn.Conv2d(in_channels=16, out_channels=32, kernel_size=(7, 7), padding=3),
             nn.Dropout(.2),
             nn.BatchNorm2d(num_features=32),
-            nn.PReLU())
+            nn.PReLU()
+        )
+
+        # Descobrir dinamicamente as dimensões de entrada para encoderLin
+        with torch.no_grad():
+            dummy_x = torch.randn(1, *x.shape[1:]).to(device)
+            dummy_y = torch.randn(1, *y.shape[1:]).to(device)
+            dummy_y = dummy_y.to(next(self.encoder2d.parameters()).device)
+            conv_out = self.encoder2d(dummy_y)
+            flattened_size = conv_out.view(conv_out.size(0), -1).shape[1]
+            flattened_x = dummy_x.view(dummy_x.size(0), -1).shape[1]
+            in_features = flattened_size + flattened_x  # Dimensão correta
+        
+        print(in_features)
+
+        # Definir camada Linear usando o tamanho inferido
         self.encoderLin = nn.Sequential(
-            nn.Linear(in_features=32, out_features=out_features), # 7
+            nn.Linear(in_features=in_features, out_features=out_features),
             nn.LeakyReLU(),
-            nn.Linear(in_features=out_features, out_features=32), # 8
+            nn.Linear(in_features=out_features, out_features=32),
             nn.LeakyReLU(),
-            nn.Linear(in_features=32, out_features=16), # 9
-            nn.LeakyReLU())
+            nn.Linear(in_features=32, out_features=16),
+            nn.LeakyReLU()
+        )
+
+        self.layer10 = nn.Linear(in_features=16, out_features=3)
 
     def encode(self):
-        '''
-        desc
-        - q_phi(z|x, y) ~ "recognition" encoder network
-          where,
-            phi ~ trainable parameter set
-            z   ~ locations within a latent space
-        returns
-        - mu_q, logvar_q  ~ q_phi encoder output latent space representation
-        '''
-        # conv_out = self.encoder(torch.randn(1, 3, 1000)) # test network and calculates output itermidiate dimension (dummy input)
-        
-        #y = y.unsqueeze(-1).unsqueeze(-1)  # Transforma [batch_size, 3] em [batch_size, 3, 1, 1]
+        conv_out = self.encoder2d(self.y).to(device)      
+        flattened_size = conv_out.view(conv_out.size(0), -1)
+        flattened_x = self.x.view(self.x.size(0), -1)
+        xy = torch.cat((flattened_size, flattened_x), dim=1)
 
-        
-        conv_out = self.encoder2d(self.y).to(device) # apply conv layers        
-        flattened_size = conv_out.view(conv_out.size(0), -1).to(device) # flatten layer (keeping batch size untouched)
-        flattened_x = self.x.view(self.x.size(0), -1).to(device) # flatten the vn² too      
-        xy = torch.cat((flattened_size, flattened_x), dim=1).to(device) # append(x)        
-        #print(f"Self encoder Lin: {self.encoderLin}")
-        in_features = xy.shape[1] # formating porpuses
-        self.encoderLin[0] = nn.Linear(in_features=in_features, out_features=out_features).to(device)    
-        fc_out = self.encoderLin(xy).to(device) # apply fully conected layers   
-        layer10 = nn.Linear(in_features=16, out_features=3).to(device) # 10th layer
-        mu_q = layer10(fc_out).to(device)
-        logvar_q = layer10(fc_out).to(device)
-        
-        '''
-        desc
-        - r_theta1(z|y) ~ encoder network
-          where, 
-            theta ~ trainable neural network parameters sets
-            
-        returns
-        - mu_r1, logvar_r1 ~ r_theta1 encoder output latent space representation
-        '''
+        fc_out = self.encoderLin(xy)
+        mu_q = self.layer10(fc_out)
+        logvar_q = self.layer10(fc_out)
+
         conv_out_r = self.encoder2d(self.y).to(device) # apply conv layers
-        flattened_y_r = conv_out_r.view(conv_out.size(0), -1).to(device) # flatten layer
-        in_features_r = flattened_y_r.shape[1] # formating porpuses
-        self.encoderLin[0] = nn.Linear(in_features=in_features_r, out_features=out_features).to(device) 
-        fc_out_r = self.encoderLin(flattened_y_r).to(device) # apply fully conected layers
-        layer10_r = nn.Linear(in_features=16, out_features=3).to(device) # 10th layer
-        mu_r1 = layer10_r(fc_out_r).to(device)
-        logvar_r1 = layer10_r(fc_out_r).to(device)
+        print(conv_out_r.shape)
+        flattened_y_r = conv_out_r.view(conv_out_r.size(0), -1) # flatten layer
+        print(conv_out_r.shape)
+        
+        fc_out_r = self.encoderLin(flattened_y_r) # apply fully conected layers
+        mu_r1 = self.layer10(fc_out_r).to(device)
+        logvar_r1 = self.layer10(fc_out_r).to(device)
         
         return mu_q, logvar_q, mu_r1, logvar_r1
-    
+
     def reparameterize(self, mu, logvar):
-        std = torch.exp(0.5*logvar)
+        std = torch.exp(0.5 * logvar)
         eps = torch.randn_like(std)
-        return mu + eps*std
-    
+        return mu + eps * std
+
     def decode(self, z_q):
-        '''
-        desc
-        - r_theta2(x|y, z) ~ decoder network
-        args
-        - z_q ~ samples from the q_phi latent space representation
-        returns
-        - mu_r2, logvar_r2 ~ the output of the decoder (a distribution in the physical parameter space)
-        '''
-        conv_out = self.encoder2d(self.y).to(device)
-        flattened_y = conv_out.view(conv_out.size(0), -1).to(device)
-        zy = torch.cat((flattened_y, z_q.to(device)), dim=1).to(device) # append(z)      
-        in_features = zy.shape[1] # formating porpuses
-        self.encoderLin[0] = nn.Linear(in_features=in_features, out_features=out_features).to(device)     
-        fc_out = self.encoderLin(zy).to(device)
-        layer10 = nn.Linear(in_features=16, out_features=3).to(device) # 10th layer
-        layer10a = nn.Sigmoid().to(device) # instantiating
-        layer10b = nn.LeakyReLU().to(device) #################### USED TO BE RELU, but https://discuss.pytorch.org/t/loss-doesnt-decrease-reuqires-grad-true/108071/13
-        mu_r2 = layer10a(layer10(fc_out)).to(device)
-        logvar_r2 = -layer10b(layer10(fc_out)).to(device)
-        
-         # Reparameterization trick to sample from the distribution
-        std_r2 = torch.exp(0.5 * logvar_r2)  # Standard deviation
-        eps = torch.randn_like(std_r2)  # Random noise
-        z_r2 = mu_r2 + eps * std_r2  # Sample from the distribution
-            
-        return z_r2
-    
+        conv_out = self.encoder2d(self.y)
+        flattened_y = conv_out.view(conv_out.size(0), -1)
+        zy = torch.cat((flattened_y, z_q), dim=1)
+
+        fc_out = self.encoderLin(zy)
+        mu_r2 = torch.sigmoid(self.layer10(fc_out))
+        logvar_r2 = -F.leaky_relu(self.layer10(fc_out))
+
+        std_r2 = torch.exp(0.5 * logvar_r2)
+        eps = torch.randn_like(std_r2)
+        z_r2 = mu_r2 + eps * std_r2
+
+        return z_r2, mu_r2, logvar_r2
+
     def forward(self):
         mu, logvar, mur1, logvarr1 = self.encode()
         z = self.reparameterize(mu, logvar)
-        recon_data = self.decode(z)
-        return recon_data, mu, logvar, mur1, logvarr1
+        recon_data, mur2, logvarr2 = self.decode(z)
+        return recon_data, mu, logvar, mur1, logvarr1, mur2, logvarr2
 
 train_y, train_x = next(iter(train_loader))
 train_y, train_x = train_y.to(device), train_x.to(device)
 
-model = ConditionalVariationalAutoEncoder(train_x, train_y).to(device)
-#optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-optimizer = torch.optim.Adam([
+model = ConditionalVariationalAutoEncoder(train_x, train_y, out_features).to(device)
+optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+'''optimizer = torch.optim.Adam([
     {'params': model.encoderLin.parameters()},
     {'params': model.parameters()}
-], lr=learning_rate)
+], lr=learning_rate)'''
 
 
 train_loss_history, train_r2_history, val_loss_history, val_r2_history = [], [], [], []
@@ -281,7 +264,7 @@ for epoch in range(num_epochs):
         #print(f"inputs size (x): {inputs.size()}")
         #print(f"targets size (y): {targets.size()}") 
         
-        recon_data, mu_q, logvar_q, mu_r1, logvar_r1 = model()       
+        recon_data, mu_q, logvar_q, mu_r1, logvar_r1, mu_r2, logvar_r2 = model()       
         optimizer.zero_grad()        
         #print(model.encoderLin[0].weight.grad)
         #for param_group in optimizer.param_groups:
@@ -348,7 +331,7 @@ for epoch in range(num_epochs):
             inputs, targets = inputs.to(device), targets.to(device)
             targets = targets.view(-1, 3)
             
-            recon_data, mu_q, logvar_q, mu_r1, logvar_r1 = model() 
+            recon_data, mu_q, logvar_q, mu_r1, logvar_r1, mu_r2, logvar_r2 = model() 
             
             Valloss = bruh.forward(mu_q, logvar_q, mu_r1, logvar_r1, targets, recon_data)  
             Valrsq = calculate_r2(recon_data, targets) 
@@ -368,3 +351,31 @@ for epoch in range(num_epochs):
 
     print(f"\033[31;1mEpoch {epoch + 1}/{num_epochs}\033[m: Train Loss={train_epoch_loss}, Train R²={train_epoch_r2:.4f}, "
         f"Val Loss={val_epoch_loss}, Val R²={val_epoch_r2:.4f}")    
+
+# Data Analysis
+# plot loss and R^2 curves
+plt.figure(figsize=(12, 5))
+
+# removing extreme outlier
+train_loss_history_mod = train_loss_history[1:]
+val_loss_history_mod = val_loss_history[1:]
+train_r2_history_mod = train_r2_history[1:]
+val_r2_history_mod = val_r2_history[1:]
+epochs_mod = range(2, num_epochs + 1)
+
+plt.subplot(1, 2, 1)
+plt.plot(epochs_mod, train_loss_history_mod, label='Train Loss')
+plt.plot(epochs_mod, val_loss_history_mod, label='Val Loss')
+plt.xlabel('Epochs')
+plt.ylabel('Loss')
+plt.legend()
+
+plt.subplot(1, 2, 2)
+# if r² is negative, that means - the model is worst then outputing the mean value.
+plt.plot(epochs_mod, train_r2_history_mod, label='Train $R²$')
+plt.plot(epochs_mod, val_r2_history_mod, label='Val $R²$')
+plt.xlabel('Epochs')
+plt.ylabel('$R²$')
+plt.legend()
+
+plt.show()
