@@ -12,16 +12,14 @@ The relationship between the number of particles in a Bin and its color value wh
 Four bin values taken for three different events. Each matrix represents one event. The first column represents the color value of the chosen bins (normalized between 0 and 255), and the second column represents the number of corresponding particles:
 
 $$
-\left[ 
-\begin{array}{ccc}
+\begin{bmatrix}
     \begin{bmatrix} 255 & 25 \\ 41 & 4 \\ 92 & 9 \\ 0 & 0 \end{bmatrix} &
     \begin{bmatrix} 122 & 12 \\ 82 & 8 \\ 51 & 5 \\ 0 & 0 \end{bmatrix} &
     \begin{bmatrix} 151 & 13 \\ 197 & 17 \\ 139 & 12 \\ 0 & 0 \end{bmatrix}
-\end{array}
-\right]
+\end{bmatrix}
 $$
 
-### Relationship between color value and number of particles:
+#### Relationship between color value and number of particles:
 
 $$
 c = \left\lfloor \dfrac{p}{M} \cdot 255 + \dfrac{1}{2} \right\rfloor
@@ -50,7 +48,6 @@ $$
 $$
 
 Taking the nearest integer, we get \( M = 22 \), correctly representing the number of particles in the most filled bin of the third event.
-
 ---
 ## Data validation
 To validate the data provided, the YiLunDu equation of state classification paper (arXiv:1910.11530) was reproduced with 99.75% and 99.09% accuracies of train and validation datasets respectively. This reproduce was done in ^Eos_network.py".
