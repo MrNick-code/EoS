@@ -4,6 +4,7 @@ Flow harmonics characterize the anisotropic expansion of the QGP and help in und
 
 ## Data creation/manipulation
 The Data folder is where the dataset is created. Starting from the MUSIC RHIC text files, the heat maps are created based on the transversium momentum and the azimuthal angle of all particles in a event, which each event correspond to a single image in the dataset. The "Eos_inputrework_fast.py" is how this data ins transformed and "pixel_analysis.py" is a self prove of how the heat maps trully represents the original data. 
+
 ---
 ### *Proof I*
 
