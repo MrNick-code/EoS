@@ -5,58 +5,52 @@ Flow harmonics characterize the anisotropic expansion of the QGP and help in und
 ## Data creation/manipulation
 The Data folder is where the dataset is created. Starting from the MUSIC RHIC text files, the heat maps are created based on the transversium momentum and the azimuthal angle of all particles in a event, which each event correspond to a single image in the dataset. The "Eos_inputrework_fast.py" is how this data ins transformed and "pixel_analysis.py" is a self prove of how the heat maps trully represents the original data. 
 ---
-> **/textit{Proof I}**
-> The relationship between the number of particles in a Bin and its color value when creating the histogram
-> 4 bin values ​​taken for 3 different events. Each matrix represents one event. The first column represents the color value of the chosen bins (normalized between 0 and 255) and the second column represents the number of corresponding particles:
-> ```Math
-> \begin{equation
->\left[ 
->\begin{array}{c@{}c@{}c@{}c}
->\left[\begin{array}{ccc}
->            255&25\\
->            41&4\\
->            92&9\\
->            0&0\\
->\end{array}\right] & \left[\begin{array}{ccc}
->            122&12\\
->            82&8\\
->            51&5\\
->            0&0\\
->\end{array}\right] & \left[\begin{array}{ccc}
->            151&13\\
->            197&17\\
->            139&12\\
->            0&0\\
->\end{array}\right]
->\end{array}\right]
->\end{equation*}
->```
-> Relationship between color value and number of particles:
-> \begin{equation*}
-    c = \floor*{\dfrac{p}{M}.255 + \dfrac{1}{2}}
-\end{equation*}
-> where,
-> \begin{itemize}
-    \item c: valor da cor
-    \item p: número de partículas do bin em questão
-    \item M: número de partículas no bin mais preenchido
-\end{itemize}
-> So if we take any value of the color of a certain bin and its number of particles, we can successfully estimate M by
-> \begin{equation*}
-    M = \dfrac{255.p}{\ceil*{c-\dfrac{1}{2}}}
-\end{equation*}
-> For example, for event 3 we have:
-> \begin{equation*}
->    \substack{
->    
->        M_{c=151} = 21,953\\
->        
->        M_{c=197} = 22,005\\
->        
->        M_{c=139} = 22,014
->    }
->\end{equation*}
-> Taking the nearest integer we have $M = 22$, correctly representing the number of particles in the most filled bin of the third event.
+### *Proof I*
+
+The relationship between the number of particles in a Bin and its color value when creating the histogram.
+
+Four bin values taken for three different events. Each matrix represents one event. The first column represents the color value of the chosen bins (normalized between 0 and 255), and the second column represents the number of corresponding particles:
+
+$$
+\left[ 
+\begin{array}{ccc}
+    \begin{bmatrix} 255 & 25 \\ 41 & 4 \\ 92 & 9 \\ 0 & 0 \end{bmatrix} &
+    \begin{bmatrix} 122 & 12 \\ 82 & 8 \\ 51 & 5 \\ 0 & 0 \end{bmatrix} &
+    \begin{bmatrix} 151 & 13 \\ 197 & 17 \\ 139 & 12 \\ 0 & 0 \end{bmatrix}
+\end{array}
+\right]
+$$
+
+### Relationship between color value and number of particles:
+
+$$
+c = \left\lfloor \dfrac{p}{M} \cdot 255 + \dfrac{1}{2} \right\rfloor
+$$
+
+where:
+
+- \( c \): color value  
+- \( p \): number of particles in the bin  
+- \( M \): number of particles in the most filled bin  
+
+So if we take any value of the color of a certain bin and its number of particles, we can successfully estimate \( M \) by:
+
+$$
+M = \dfrac{255 \cdot p}{\lceil c - \dfrac{1}{2} \rceil}
+$$
+
+For example, for event 3 we have:
+
+$$
+\begin{aligned}
+    M_{c=151} &= 21.953 \\
+    M_{c=197} &= 22.005 \\
+    M_{c=139} &= 22.014
+\end{aligned}
+$$
+
+Taking the nearest integer, we get \( M = 22 \), correctly representing the number of particles in the most filled bin of the third event.
+
 ---
 ## Data validation
 To validate the data provided, the YiLunDu equation of state classification paper (arXiv:1910.11530) was reproduced with 99.75% and 99.09% accuracies of train and validation datasets respectively. This reproduce was done in ^Eos_network.py".
