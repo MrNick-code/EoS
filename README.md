@@ -12,28 +12,26 @@ The relationship between the number of particles in a Bin and its color value wh
 Four bin values taken for three different events. Each matrix represents one event. The first column represents the color value of the chosen bins (normalized between 0 and 255), and the second column represents the number of corresponding particles:
 
 $$
-\begin{array}{c c c}
-\begin{bmatrix} 
+\begin{aligned}
+&\begin{bmatrix} 
   255 & 25 \\ 
    41 &  4 \\ 
    92 &  9 \\ 
     0 &  0 
-\end{bmatrix} &
-
+\end{bmatrix}, \quad
 \begin{bmatrix} 
   122 & 12 \\ 
    82 &  8 \\ 
    51 &  5 \\ 
     0 &  0 
-\end{bmatrix} &
-
+\end{bmatrix}, \quad
 \begin{bmatrix} 
   151 & 13 \\ 
   197 & 17 \\ 
   139 & 12 \\ 
     0 &  0 
 \end{bmatrix}
-\end{array}
+\end{aligned}
 $$
 
 #### Relationship between color value and number of particles:
