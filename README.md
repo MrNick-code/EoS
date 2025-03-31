@@ -8,27 +8,29 @@ The Data folder is where the dataset is created. Starting from the MUSIC RHIC te
 > **/textit{Proof I}**
 > The relationship between the number of particles in a Bin and its color value when creating the histogram
 > 4 bin values ​​taken for 3 different events. Each matrix represents one event. The first column represents the color value of the chosen bins (normalized between 0 and 255) and the second column represents the number of corresponding particles:
-> \begin{equation*}
-\left[ 
-\begin{array}{c@{}c@{}c@{}c}
-\left[\begin{array}{ccc}
-            255&25\\
-            41&4\\
-            92&9\\
-            0&0\\
-\end{array}\right] & \left[\begin{array}{ccc}
-            122&12\\
-            82&8\\
-            51&5\\
-            0&0\\
-\end{array}\right] & \left[\begin{array}{ccc}
-            151&13\\
-            197&17\\
-            139&12\\
-            0&0\\
-\end{array}\right]
-\end{array}\right]
-\end{equation*}
+> ```Math
+> \begin{equation
+>\left[ 
+>\begin{array}{c@{}c@{}c@{}c}
+>\left[\begin{array}{ccc}
+>            255&25\\
+>            41&4\\
+>            92&9\\
+>            0&0\\
+>\end{array}\right] & \left[\begin{array}{ccc}
+>            122&12\\
+>            82&8\\
+>            51&5\\
+>            0&0\\
+>\end{array}\right] & \left[\begin{array}{ccc}
+>            151&13\\
+>            197&17\\
+>            139&12\\
+>            0&0\\
+>\end{array}\right]
+>\end{array}\right]
+>\end{equation*}
+>```
 > Relationship between color value and number of particles:
 > \begin{equation*}
     c = \floor*{\dfrac{p}{M}.255 + \dfrac{1}{2}}
