@@ -64,6 +64,7 @@ $$
 $$
 
 Taking the nearest integer, we get \( M = 22 \), correctly representing the number of particles in the most filled bin of the third event.
+
 ---
 ## Data validation
 To validate the data provided, the YiLunDu equation of state classification paper (arXiv:1910.11530) was reproduced with 99.75% and 99.09% accuracies of train and validation datasets respectively. This reproduce was done in ^Eos_network.py".
