@@ -95,7 +95,7 @@ $$
 \end{pmatrix}
 $$
 
-where \( \alpha \), \( \beta \), and \( \gamma \) are the weights of each loss term.
+where $$\( \alpha \), \( \beta \)$$, and $$\( \gamma \)$$ are the weights of each loss term.
 
 #### Reconstruction Loss
 
@@ -103,7 +103,7 @@ $$
 MSE_{rec} =  \dfrac{1}{N} \sum_{i=1}^n (Y_i - \widehat{Y}_i)^2
 $$
 
-where \( Y_i \) represents the **decoder output**, and \( \widehat{Y}_i \) represents the **input**.
+where $$\( Y_i \)$$ represents the **decoder output**, and $$\( \widehat{Y}_i \)$$ represents the **input**.
 
 #### Kullback-Leibler Divergence
 
@@ -111,7 +111,7 @@ $$
 D_{KL}(\mathscr{N}(\mu,\sigma^2)\|\mathscr{N}(0,I)) = \dfrac{\mathcal{N}}{2} \sum_{j=1}^d (1 + \log \sigma_j^2 - \mu_j^2 - \sigma_j^2)
 $$
 
-where \( \mathcal{N} \) is a **normalization term**, and \( \mathscr{N}(\mu,\sigma^2) \) is the **latent space distribution**, with \( \mu \) as the **mean** and \( \sigma \) as the **standard deviation**.
+where $$\( \mathcal{N} \)$$ is a **normalization term**, and $$\( \mathscr{N}(\mu,\sigma^2) \)$$ is the **latent space distribution**, with $$\( \mu \)$$ as the **mean** and $$\( \sigma \)$$ as the **standard deviation**.
 
 #### Regression Loss
 
@@ -119,7 +119,7 @@ $$
 MSE_{pred} = \dfrac{1}{N} \sum_{i=1}^n (Y'_i - \widehat{Y}'_i)^2
 $$
 
-where \( Y'_i \) is the **prediction**, and \( \widehat{Y}'_i \) is the **target**.
+where $$\( Y'_i \)$$ is the **prediction**, and $$\( \widehat{Y}'_i \)$$ is the **target**.
 
 ---
 
