@@ -85,13 +85,12 @@ Loss function composition.
 
 $$
 \mathcal{L} = 
-\begin{bmatrix} 
-    \alpha \\ \beta \\ \gamma 
-\end{bmatrix} 
-\cdot
-\begin{bmatrix} 
-    MSE_{rec} & D_{KL} & MSE_{pred} 
-\end{bmatrix}
+\begin{pmatrix} 
+    \alpha & \beta & \gamma 
+\end{pmatrix} 
+\begin{pmatrix} 
+    MSE_{rec} \\ D_{KL} \\ MSE_{pred} 
+\end{pmatrix}
 $$
 
 where \( \alpha \), \( \beta \), and \( \gamma \) are the weights of each loss term.
