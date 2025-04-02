@@ -85,12 +85,13 @@ Loss function composition.
 
 $$
 \mathcal{L} = 
-\begin{pmatrix} 
+\begin{bmatrix} 
     \alpha \\ \beta \\ \gamma 
-\end{pmatrix} 
-\begin{pmatrix} 
+\end{bmatrix} 
+\cdot
+\begin{bmatrix} 
     MSE_{rec} & D_{KL} & MSE_{pred} 
-\end{pmatrix}
+\end{bmatrix}
 $$
 
 where \( \alpha \), \( \beta \), and \( \gamma \) are the weights of each loss term.
@@ -106,7 +107,7 @@ where \( Y_i \) represents the **decoder output**, and \( \widehat{Y}_i \) repre
 #### Kullback-Leibler Divergence
 
 $$
-D_{KL}(\mathscr{N}(\mu,\sigma^2)\|\mathscr{N}(0,\mathds{I})) = \dfrac{\mathcal{N}}{2} \sum_{j=1}^d (1 + \log \sigma_j^2 - \mu_j^2 - \sigma_j^2)
+D_{KL}(\mathscr{N}(\mu,\sigma^2)\|\mathscr{N}(0,I)) = \dfrac{\mathcal{N}}{2} \sum_{j=1}^d (1 + \log \sigma_j^2 - \mu_j^2 - \sigma_j^2)
 $$
 
 where \( \mathcal{N} \) is a **normalization term**, and \( \mathscr{N}(\mu,\sigma^2) \) is the **latent space distribution**, with \( \mu \) as the **mean** and \( \sigma \) as the **standard deviation**.
