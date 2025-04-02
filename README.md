@@ -75,5 +75,51 @@ To validate the data provided, the YiLunDu equation of state classification pape
 ## Flow estimation using Variational Autoencoders
 Before going with the method choosed (CVAE, based on the results found in arXiv:1909.06296), VAE was first applied being it a simpler version so, easier and faster to apply. Unexpectedly, even though VAE did not returned a very good result, it does could find some patterns in data, since it returned some results. As far I could test it, the average R² ("accuracy") of estimating the lowest order therms of flow harmonics was 59.93% ("vae_to_fllow_3.py"). The studies continues using, finally, CVAE.
 
+---
+
+### *Proof II*
+
+Loss function composition.
+
+#### Total Loss Function
+
+$$
+\mathcal{L} = 
+\begin{pmatrix} 
+    \alpha \\ \beta \\ \gamma 
+\end{pmatrix} 
+\begin{pmatrix} 
+    MSE_{rec} & D_{KL} & MSE_{pred} 
+\end{pmatrix}
+$$
+
+where \( \alpha \), \( \beta \), and \( \gamma \) are the weights of each loss term.
+
+#### Reconstruction Loss
+
+$$
+MSE_{rec} =  \dfrac{1}{N} \sum_{i=1}^n (Y_i - \widehat{Y}_i)^2
+$$
+
+where \( Y_i \) represents the **decoder output**, and \( \widehat{Y}_i \) represents the **input**.
+
+#### Kullback-Leibler Divergence
+
+$$
+D_{KL}(\mathscr{N}(\mu,\sigma^2)\|\mathscr{N}(0,\mathds{I})) = \dfrac{\mathcal{N}}{2} \sum_{j=1}^d (1 + \log \sigma_j^2 - \mu_j^2 - \sigma_j^2)
+$$
+
+where \( \mathcal{N} \) is a **normalization term**, and \( \mathscr{N}(\mu,\sigma^2) \) is the **latent space distribution**, with \( \mu \) as the **mean** and \( \sigma \) as the **standard deviation**.
+
+#### Regression Loss
+
+$$
+MSE_{pred} = \dfrac{1}{N} \sum_{i=1}^n (Y'_i - \widehat{Y}'_i)^2
+$$
+
+where \( Y'_i \) is the **prediction**, and \( \widehat{Y}'_i \) is the **target**.
+
+---
+
 ## Flow estimation using Conditional Variational Autoencoders
 Working on it ("cvae_to_flow_st.py" & "cvae_to_flow_tt.py")
