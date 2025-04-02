@@ -86,10 +86,12 @@ Loss function composition.
 $$
 \mathcal{L} = 
 \begin{pmatrix} 
-    \alpha & \beta & \gamma 
+    \alpha \\ 
+    \beta \\ 
+    \gamma 
 \end{pmatrix} 
 \begin{pmatrix} 
-    MSE_{rec} \\ D_{KL} \\ MSE_{pred} 
+    MSE_{rec} & D_{KL} & MSE_{pred} 
 \end{pmatrix}
 $$
 
